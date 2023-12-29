@@ -17,8 +17,8 @@ void mouseMovementCallback(GLFWwindow* window, double xpos, double ypos);
 void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 
 #pragma region parameters
-const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 800;
+const unsigned int SCR_WIDTH = 1280;
+const unsigned int SCR_HEIGHT = 720;
 
 double xPos = SCR_WIDTH / 2.0f, yPos = SCR_HEIGHT / 2.0f; //mouse movement
 bool ShouldRotateModel = false;
@@ -74,6 +74,8 @@ int main() {
     glfwSetCursorPosCallback(window, mouseMovementCallback);
     glfwSetMouseButtonCallback(window, mouseButtonCallback);
 
+    glfwSetWindowSizeLimits(window, SCR_WIDTH, SCR_HEIGHT, SCR_WIDTH, SCR_HEIGHT);
+
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
         std::cout << "Failed to initialize GLAD" << std::endl;
@@ -87,11 +89,17 @@ int main() {
 #pragma region TRANSFORMATION
     glm::vec3 cameraPos = glm::vec3(0, 0, 30.0f);
     glm::mat4 projection = glm::mat4(1.0f); 
-    projection = glm::perspective(glm::radians(45.0f), (float)(SCR_WIDTH / SCR_HEIGHT), 0.1f, 500.0f);
-    
+    projection = glm::perspective(glm::radians(45.0f), static_cast<float>(SCR_WIDTH) / static_cast<float>(SCR_HEIGHT), 0.1f, 500.0f);
+
     glm::vec4 lightPosition = glm::vec4(0, 20, 200, 1);
     glm::mat4 lightRotation = glm::mat4(1.0f);
 #pragma endregion
+
+glm::mat4 projectionLeft = glm::perspective(glm::radians(45.0f), static_cast<float>(SCR_WIDTH) / (2.0f * static_cast<float>(SCR_HEIGHT)), 0.3f, 500.0f);
+glm::mat4 projectionRight = glm::perspective(glm::radians(45.0f), static_cast<float>(SCR_WIDTH) / (2.0f * static_cast<float>(SCR_HEIGHT)), 0.3f, 500.0f);
+
+glm::mat4 viewLeft = glm::lookAt(cameraPos - glm::vec3(1.0f, 0.0f, 0.0f), cameraPos, glm::vec3(0.0f, 1.0f, 0.0f));
+glm::mat4 viewRight = glm::lookAt(cameraPos + glm::vec3(1.0f, 0.0f, 0.0f), cameraPos, glm::vec3(0.0f, 1.0f, 0.0f));
 
 #pragma region cubeMap
     Shader cubeMapShader("VertexShader.vs", "CubeMapFragmentShader.fs");
@@ -141,30 +149,22 @@ int main() {
         lightRotation = glm::rotate(lightRotation, glm::radians(pitch_light), glm::vec3(1, 0, 0));
         lightRotation = glm::rotate(lightRotation, glm::radians(yaw_light), glm::vec3(0, 1, 0));
 
-        for(Model * m : models)
+        for (Model* m : models)
         {
             m->setLightPosition(lightRotation * lightPosition);
         }
 
-        //draw model
-        if (showCubeMap) {
-            glActiveTexture(GL_TEXTURE5);
-            glBindTexture(GL_TEXTURE_CUBE_MAP, cubeMapTexID);
-            models[1]->setCubeMapOrientation(models[0]->getModelViewMatrix());
-        } 
+        // Draw left view
+        glViewport(0, 0, SCR_WIDTH / 2, SCR_HEIGHT);
+        models[1]->setProjectionAndView(projectionLeft, viewLeft);
         models[1]->ToggleCubeMapReflections(showCubeMap);
         models[1]->Draw();
 
-        //draw cubemap
-        if (showCubeMap) {
-            glDepthMask(GL_FALSE);
-
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_CUBE_MAP, cubeMapTexID);
-            models[0]->Draw();
-
-            glDepthMask(GL_TRUE);
-        }
+        // Draw right view
+        glViewport(SCR_WIDTH / 2, 0, SCR_WIDTH / 2, SCR_HEIGHT);
+        models[1]->setProjectionAndView(projectionRight, viewRight);
+        models[1]->ToggleCubeMapReflections(showCubeMap);
+        models[1]->Draw();
 
         glfwSwapBuffers(window);
         glfwPollEvents();

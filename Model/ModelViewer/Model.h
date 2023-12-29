@@ -130,6 +130,11 @@ public:
         }
     }
 
+    void setProjectionAndView(const glm::mat4& projection, const glm::mat4& view) {
+        this->projection = projection;
+        this->view = view;
+    }
+
     void Draw() {
         shader.use();
 
